@@ -311,25 +311,34 @@ analyzeBtn.addEventListener('click', async () => {
 });
 
 async function analyzeRoomWithAI(token, base64, retry = true) {
+    // Switching to a more stable model for free tier
     const modelUrl = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large";
     
     try {
+        // Convert base64 to binary Blob
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {type: 'image/jpeg'});
+
         const response = await fetch(modelUrl, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ inputs: base64 })
+            body: blob
         });
 
         const data = await response.json();
 
         // Handle model loading state
         if (response.status === 503 && data.estimated_time && retry) {
-            document.getElementById('analysis-text').textContent = "Waking up AI sensors...";
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
-            return analyzeRoomWithAI(token, base64, false); // One retry
+            document.getElementById('analysis-text').textContent = "AI is waking up (5s)...";
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            return analyzeRoomWithAI(token, base64, false);
         }
 
         if (!response.ok || data.error) {
@@ -340,9 +349,11 @@ async function analyzeRoomWithAI(token, base64, retry = true) {
         const theme = mapCaptionToTheme(caption);
         finishAnalysis(theme, `I see: "${caption}"`);
     } catch (err) {
-        console.error(err);
+        console.error("HF Error Details:", err);
         let msg = "HF Analysis failed, but my sensors detected a vibe...";
-        if (err.message.includes("loading")) msg = "The AI is still waking up. Please try again in 10 seconds!";
+        if (err.message && err.message.toLowerCase().includes("loading")) {
+            msg = "The AI is still waking up. Please try one more time in a few seconds!";
+        }
         finishAnalysis(suggestThemeByPixels(), msg);
     }
 }
