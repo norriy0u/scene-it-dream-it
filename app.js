@@ -297,9 +297,9 @@ analyzeBtn.addEventListener('click', async () => {
     offscreen.getContext('2d').drawImage(canvas, 0, 0, 640, 360);
     const base64Image = offscreen.toDataURL('image/jpeg', 0.8).split(',')[1];
 
-    const apiKey = localStorage.getItem('claude_api_key');
+    const apiKey = localStorage.getItem('hf_api_token');
 
-    if (apiKey && apiKey.startsWith('sk-ant-')) {
+    if (apiKey && apiKey.startsWith('hf_')) {
         await analyzeRoomWithAI(apiKey, base64Image);
     } else {
         // Pixel-based fallback
@@ -310,42 +310,42 @@ analyzeBtn.addEventListener('click', async () => {
     }
 });
 
-async function analyzeRoomWithAI(key, base64) {
-    const prompt = "Describe the lighting, colors, and objects in this room in 20 words. Then suggest one of these themes: cafe, spaceship, jungle, beach, cyberpunk, haunted. Format: [Description] Suggestion: [Theme]";
+async function analyzeRoomWithAI(token, base64) {
+    const modelUrl = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large";
     
     try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        // Prepare image data for HF
+        const response = await fetch(modelUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': key,
-                'anthropic-version': '2023-06-01',
-                'dangerously-allow-browser': 'true'
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'claude-3-haiku-20240307',
-                max_tokens: 100,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: prompt },
-                        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } }
-                    ]
-                }]
+                inputs: base64
             })
         });
 
-        if (!response.ok) throw new Error("AI analysis failed.");
+        if (!response.ok) throw new Error("Hugging Face analysis failed.");
         const data = await response.json();
-        const text = data.content[0].text;
+        const caption = data[0].generated_text;
         
-        const themeMatch = text.match(/Suggestion: (\w+)/i);
-        const theme = themeMatch ? themeMatch[1].toLowerCase() : 'spaceship';
-        finishAnalysis(theme, text.split('Suggestion:')[0]);
+        const theme = mapCaptionToTheme(caption);
+        finishAnalysis(theme, `I see: "${caption}"`);
     } catch (err) {
         console.error(err);
-        finishAnalysis(suggestThemeByPixels(), "AI Analysis failed, but my sensors detected a vibe...");
+        finishAnalysis(suggestThemeByPixels(), "HF Analysis failed, but my sensors detected a vibe...");
     }
+}
+
+function mapCaptionToTheme(caption) {
+    const text = caption.toLowerCase();
+    if (text.includes('bed') || text.includes('dark')) return 'haunted';
+    if (text.includes('computer') || text.includes('desk') || text.includes('laptop')) return 'cyberpunk';
+    if (text.includes('plant') || text.includes('tree') || text.includes('forest')) return 'jungle';
+    if (text.includes('sun') || text.includes('bright') || text.includes('window')) return 'beach';
+    if (text.includes('kitchen') || text.includes('table') || text.includes('coffee')) return 'cafe';
+    return 'spaceship'; // Default
 }
 
 function suggestThemeByPixels() {
@@ -386,12 +386,12 @@ closeModalBtn.addEventListener('click', () => apiModal.classList.add('hidden'));
 closePanelBtn.addEventListener('click', () => analysisPanel.classList.add('hidden'));
 saveKeyBtn.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
-    if (key.startsWith('sk-ant-')) {
-        localStorage.setItem('claude_api_key', key);
+    if (key.startsWith('hf_')) {
+        localStorage.setItem('hf_api_token', key);
         apiModal.classList.add('hidden');
-        alert("API Key saved! Real analysis enabled.");
+        alert("Hugging Face Token saved! Free AI analysis enabled.");
     } else {
-        alert("Invalid API key format.");
+        alert("Invalid Token format (should start with hf_).");
     }
 });
 
