@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCENE IT, DREAM IT 🎬</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-scene="default">
+    <div id="app">
+        <header>
+            <div class="header-content">
+                <h1>SCENE IT, DREAM IT 🎬</h1>
+                <p>Transform your world in real time.</p>
+            </div>
+            <div id="status-badge" class="badge-pending">Camera: Off</div>
+        </header>
+
+        <main>
+            <div id="viewport-container" class="scene-frame">
+                <!-- Decorative Frame Elements -->
+                <div class="frame-overlay top"></div>
+                <div class="frame-overlay right"></div>
+                <div class="frame-overlay bottom"></div>
+                <div class="frame-overlay left"></div>
+                
+                <div id="canvas-wrapper">
+                    <video id="webcam" autoplay playsinline style="display:none;"></video>
+                    <canvas id="main-canvas"></canvas>
+                    <div id="analysis-overlay" class="hidden">
+                        <div class="scanner-line"></div>
+                        <p id="analysis-text">Analyzing room geometry...</p>
+                    </div>
+                </div>
+
+                <!-- Scene Specific Decor (e.g. Porhole Bolts, Leaves) -->
+                <div class="scene-decor"></div>
+            </div>
+
+            <div id="controls">
+                <div class="selector-container">
+                    <label>CHOOSE YOUR DESTINATION</label>
+                    <div id="scene-dial" class="dial">
+                        <button class="dial-item active" data-scene="default">Default</button>
+                        <button class="dial-item" data-scene="cafe">Café</button>
+                        <button class="dial-item" data-scene="spaceship">Spaceship</button>
+                        <button class="dial-item" data-scene="jungle">Jungle</button>
+                        <button class="dial-item" data-scene="beach">Beach</button>
+                        <button class="dial-item" data-scene="cyberpunk">Cyberpunk</button>
+                        <button class="dial-item" data-scene="haunted">Haunted</button>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="start-btn">🎥 Enable Camera</button>
+                    <button id="analyze-btn" class="hidden">✨ Magic Analysis</button>
+                    <button id="snapshot-btn" class="hidden">📸 Take Snapshot</button>
+                </div>
+            </div>
+        </main>
+
+        <section id="analysis-panel" class="hidden">
+            <div class="panel-content">
+                <h3>Vibe Check Suggestion</h3>
+                <p id="vibe-result"></p>
+                <button id="close-panel">Got it</button>
+            </div>
+        </section>
+
+        <footer>
+            <div id="audio-visualizer"></div>
+            <p>Music adapts to your dream.</p>
+        </footer>
+    </div>
+
+    <!-- Hidden audio elements or procedural audio will be handled in JS -->
+    
+    <script src="app.js"></script>
+</body>
+</html>
