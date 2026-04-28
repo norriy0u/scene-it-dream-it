@@ -24,6 +24,11 @@ const analysisOverlay = document.getElementById('analysis-overlay');
 const analysisPanel = document.getElementById('analysis-panel');
 const vibeResult = document.getElementById('vibe-result');
 const closePanelBtn = document.getElementById('close-panel');
+const settingsBtn = document.getElementById('settings-btn');
+const apiModal = document.getElementById('api-modal');
+const apiKeyInput = document.getElementById('api-key-input');
+const saveKeyBtn = document.getElementById('save-key-btn');
+const closeModalBtn = document.getElementById('close-modal-btn');
 
 // --- CAMERA INIT ---
 async function initCamera() {
@@ -280,33 +285,113 @@ function updateAudio(scene) {
     STATE.currentMusic = { osc, gain: masterGain };
 }
 
-// --- ANALYSIS (CLAUDE VISION SIMULATION / INFRA) ---
+// --- ANALYSIS (CLAUDE VISION & PIXEL MATH) ---
 analyzeBtn.addEventListener('click', async () => {
     analysisOverlay.classList.remove('hidden');
     STATE.isAnalyzing = true;
 
-    // Capture frame
-    const dataUrl = canvas.toDataURL('image/jpeg');
+    // Capture frame and resize for API (Claude likes smaller images)
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 640;
+    offscreen.height = 360;
+    offscreen.getContext('2d').drawImage(canvas, 0, 0, 640, 360);
+    const base64Image = offscreen.toDataURL('image/jpeg', 0.8).split(',')[1];
 
-    // Simulate analysis delay
-    setTimeout(() => {
-        analysisOverlay.classList.add('hidden');
-        STATE.isAnalyzing = false;
-        
-        // Mock suggestion based on average color
-        const suggestion = suggestTheme();
-        vibeResult.textContent = `Based on your room's colors and layout, I suggest the ${suggestion.toUpperCase()} theme for maximum immersion.`;
-        analysisPanel.classList.remove('hidden');
-    }, 3000);
+    const apiKey = localStorage.getItem('claude_api_key');
+
+    if (apiKey && apiKey.startsWith('sk-ant-')) {
+        await analyzeRoomWithAI(apiKey, base64Image);
+    } else {
+        // Pixel-based fallback
+        const suggestion = suggestThemeByPixels();
+        setTimeout(() => {
+            finishAnalysis(suggestion, "I've analyzed the lighting and color complexity of your room.");
+        }, 2500);
+    }
 });
 
-function suggestTheme() {
-    const themes = ['cafe', 'spaceship', 'jungle', 'beach', 'cyberpunk', 'haunted'];
-    return themes[Math.floor(Math.random() * themes.length)];
+async function analyzeRoomWithAI(key, base64) {
+    const prompt = "Describe the lighting, colors, and objects in this room in 20 words. Then suggest one of these themes: cafe, spaceship, jungle, beach, cyberpunk, haunted. Format: [Description] Suggestion: [Theme]";
+    
+    try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': key,
+                'anthropic-version': '2023-06-01',
+                'dangerously-allow-browser': 'true'
+            },
+            body: JSON.stringify({
+                model: 'claude-3-haiku-20240307',
+                max_tokens: 100,
+                messages: [{
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: prompt },
+                        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } }
+                    ]
+                }]
+            })
+        });
+
+        if (!response.ok) throw new Error("AI analysis failed.");
+        const data = await response.json();
+        const text = data.content[0].text;
+        
+        const themeMatch = text.match(/Suggestion: (\w+)/i);
+        const theme = themeMatch ? themeMatch[1].toLowerCase() : 'spaceship';
+        finishAnalysis(theme, text.split('Suggestion:')[0]);
+    } catch (err) {
+        console.error(err);
+        finishAnalysis(suggestThemeByPixels(), "AI Analysis failed, but my sensors detected a vibe...");
+    }
 }
 
-closePanelBtn.addEventListener('click', () => {
-    analysisPanel.classList.add('hidden');
+function suggestThemeByPixels() {
+    // Sample pixels to get average color and brightness
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let r = 0, g = 0, b = 0, brightness = 0;
+    
+    // Sample every 10th pixel for performance
+    for (let i = 0; i < data.length; i += 40) {
+        r += data[i];
+        g += data[i+1];
+        b += data[i+2];
+        brightness += (data[i] + data[i+1] + data[i+2]) / 3;
+    }
+    
+    const count = data.length / 40;
+    r /= count; g /= count; b /= count; brightness /= count;
+
+    // Logic for suggestion
+    if (brightness < 60) return 'haunted'; // Very dark
+    if (brightness > 200) return 'beach';  // Very bright
+    if (g > r && g > b) return 'jungle';   // Greenish
+    if (b > r && b > g) return 'spaceship'; // Blueish
+    if (r > g && r > b && brightness < 120) return 'cafe'; // Warm/dark
+    return 'cyberpunk'; // Default to cyberpunk for anything else
+}
+
+function finishAnalysis(theme, description) {
+    analysisOverlay.classList.add('hidden');
+    STATE.isAnalyzing = false;
+    vibeResult.innerHTML = `<strong>Sensors:</strong> ${description}<br><br>I suggest the <strong>${theme.toUpperCase()}</strong> theme.`;
+    analysisPanel.classList.remove('hidden');
+}
+
+// --- API MODAL HANDLERS ---
+settingsBtn.addEventListener('click', () => apiModal.classList.remove('hidden'));
+closeModalBtn.addEventListener('click', () => apiModal.classList.add('hidden'));
+saveKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    if (key.startsWith('sk-ant-')) {
+        localStorage.setItem('claude_api_key', key);
+        apiModal.classList.add('hidden');
+        alert("API Key saved! Real analysis enabled.");
+    } else {
+        alert("Invalid API key format.");
+    }
 });
 
 snapshotBtn.addEventListener('click', () => {

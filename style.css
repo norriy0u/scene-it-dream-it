@@ -46,6 +46,32 @@ h1 {
     letter-spacing: -1px;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+#settings-btn {
+    background: none;
+    border: 1px solid #333;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+#settings-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
 header p {
     opacity: 0.6;
     font-size: 1rem;
@@ -313,6 +339,52 @@ body[data-scene="cyberpunk"] .scene-decor::before {
 
 /* UTILS */
 .hidden { display: none !important; }
+
+#api-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.modal-content {
+    background: #1a1a24;
+    padding: 2.5rem;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.modal-content h3 { color: var(--accent-color); margin-bottom: 1rem; }
+.modal-content p { font-size: 0.9rem; margin-bottom: 1.5rem; opacity: 0.7; }
+#api-key-input {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #333;
+    background: #0f0f14;
+    color: #fff;
+    border-radius: 10px;
+    font-family: monospace;
+}
+
+.modal-btns { display: flex; gap: 1rem; justify-content: center; }
+.modal-btns button {
+    padding: 0.6rem 1.5rem;
+    border-radius: 50px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#save-key-btn { background: var(--accent-color); color: #000; }
+#close-modal-btn { background: #333; color: #fff; }
 
 #analysis-panel {
     position: fixed;
