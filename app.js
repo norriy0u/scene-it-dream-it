@@ -310,31 +310,40 @@ analyzeBtn.addEventListener('click', async () => {
     }
 });
 
-async function analyzeRoomWithAI(token, base64) {
+async function analyzeRoomWithAI(token, base64, retry = true) {
     const modelUrl = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large";
     
     try {
-        // Prepare image data for HF
         const response = await fetch(modelUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                inputs: base64
-            })
+            body: JSON.stringify({ inputs: base64 })
         });
 
-        if (!response.ok) throw new Error("Hugging Face analysis failed.");
         const data = await response.json();
+
+        // Handle model loading state
+        if (response.status === 503 && data.estimated_time && retry) {
+            document.getElementById('analysis-text').textContent = "Waking up AI sensors...";
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s
+            return analyzeRoomWithAI(token, base64, false); // One retry
+        }
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || "Hugging Face analysis failed.");
+        }
+
         const caption = data[0].generated_text;
-        
         const theme = mapCaptionToTheme(caption);
         finishAnalysis(theme, `I see: "${caption}"`);
     } catch (err) {
         console.error(err);
-        finishAnalysis(suggestThemeByPixels(), "HF Analysis failed, but my sensors detected a vibe...");
+        let msg = "HF Analysis failed, but my sensors detected a vibe...";
+        if (err.message.includes("loading")) msg = "The AI is still waking up. Please try again in 10 seconds!";
+        finishAnalysis(suggestThemeByPixels(), msg);
     }
 }
 
