@@ -383,6 +383,7 @@ function finishAnalysis(theme, description) {
 // --- API MODAL HANDLERS ---
 settingsBtn.addEventListener('click', () => apiModal.classList.remove('hidden'));
 closeModalBtn.addEventListener('click', () => apiModal.classList.add('hidden'));
+closePanelBtn.addEventListener('click', () => analysisPanel.classList.add('hidden'));
 saveKeyBtn.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
     if (key.startsWith('sk-ant-')) {
